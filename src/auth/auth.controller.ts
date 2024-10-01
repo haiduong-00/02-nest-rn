@@ -1,17 +1,22 @@
 
-import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, UseGuards, Request, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
+import { LocalAuthGuard } from './passport/local-auth.guard';
+import { JwtAuthGuard } from './passport/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
+  @UseGuards(LocalAuthGuard) // no call toi Passport cua local.strategy.ts de get req(bao gom user) truoc khi vao controller
   @Post("login")
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.signIn(
-      createAuthDto.email,
-      createAuthDto.password
-    );
+  handleLogin(@Request() req) {
+    return this.authService.login(req.user);
+  }
+
+  @UseGuards(JwtAuthGuard) // no call toi JwtStrategy extends PassportStrategy truoc khi vao controller
+  @Get('profile')
+  getProfile(@Request() req) {
+    return req.user;
   }
 }

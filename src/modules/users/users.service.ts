@@ -9,10 +9,14 @@ import aqp from 'api-query-params';
 import { CreateAuthDto } from '../../auth/dto/create-auth.dto';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) { }
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    private readonly mailerService: MailerService
+  ) { }
 
   isEmailExist = async (email: string): Promise<boolean> => {
     const user = await this.userModel.exists({ email });
@@ -71,7 +75,7 @@ export class UsersService {
     return await this.userModel.findOne({ _id });
   }
 
-  async findByEmail (email: string) {
+  async findByEmail(email: string) {
     return await this.userModel.findOne({ email: email });
   }
 
@@ -93,25 +97,36 @@ export class UsersService {
   }
 
   async handleRegister(registerDto: CreateAuthDto) {
-    const { name, email, password} = registerDto;
+    const { name, email, password } = registerDto;
 
     // check exist email
     const isExist = await this.isEmailExist(email);
     if (isExist) throw new BadRequestException(`Email đã tồn tại: ${email}. Vui lòng sử dụng email khác`);
 
     // hash password
-    const hashPassword = await hashPasswordHelper(password)
+    const hashPassword = await hashPasswordHelper(password);
+    const codeId = uuidv4();
     const user = await this.userModel.create({
       name, email, password: hashPassword,
       isActive: false,
       codeId: uuidv4(),
-      codeExpired: dayjs().add(1, 'minutes')
+      // codeExpired: dayjs().add(1, 'minutes')
+      codeExpired: dayjs().add(30, 'seconds')
     })
 
+    //send email - xu ly bat dong bo
+    this.mailerService.sendMail({
+      to: user.email, // list of receivers
+      subject: 'Activate your account at @duonghai ✔', // Subject line
+      template: 'register',
+      context: {
+        name: user.name ?? user.email,
+        activationCode: codeId,
+      }
+    })
     // trả ra phản hồi
     return {
       _id: user._id,
     }
-    //send email - xu ly bat dong bo
   }
 }

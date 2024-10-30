@@ -2,9 +2,10 @@
 import { Controller, Post, UseGuards, Request, Get, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './passport/local-auth.guard';
-import { Public } from '@/decorator/customize';
+import { Public, ResponseMessage } from '@/decorator/customize';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { MailerService } from '@nestjs-modules/mailer';
+import { CodeAuthDto } from './dto/code-auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -16,6 +17,7 @@ export class AuthController {
   @Post("login")
   @Public()
   @UseGuards(LocalAuthGuard) // no call toi Passport cua local.strategy.ts de get req(bao gom user) truoc khi vao controller
+  @ResponseMessage("Fetch login") // bổ sung message trong data gửi lên Front-end khi login successfull
   handleLogin(@Request() req) {
     return this.authService.login(req.user);
   }
@@ -31,6 +33,12 @@ export class AuthController {
   @Public()
   register(@Body() registerDto: CreateAuthDto) {
     return this.authService.handleRegister(registerDto);
+  }
+
+  @Post('check-code')
+  @Public()
+  checkCode(@Body() codeDto: CodeAuthDto) {
+    return this.authService.checkCode(codeDto);
   }
 
   @Get('mail')
